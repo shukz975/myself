@@ -1,0 +1,36 @@
+name: 监控熬鹰资本
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # 每10分钟运行一次
+  workflow_dispatch:         # 允许手动触发
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install requests
+
+      - name: 运行监控
+        env:
+          KOPYON_KEY: ${{ secrets.KOPYON_KEY }}
+          PUSH_TYPE: ${{ secrets.PUSH_TYPE }}
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+        run: python monitor.py
+
+      - name: 保存持仓记录
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add last_positions.json || true
+          git diff --quiet && git diff --staged --quiet || (git commit -m "更新持仓记录" && git push)
